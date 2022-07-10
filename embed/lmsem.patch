@@ -1,0 +1,2453 @@
++void usr_read_file()
++{
++
++    char* buf=(char*)mallocblk(0x1000);
++    if(buf==NULL)
++    {
++        goto err;
++    }
++    for(int i=0;i<0x1000;i++)
++    {
++        buf[i]=0;
++    }
++
++    hand_t fd=open("/file.bin",RW_FLG|FILE_TY_FILE,0);
++    if(fd==-1)
++    {
++        goto err;
++    }
++    if(read(fd,buf,512,0)==SYSSTUSERR)
++    {
++        goto err;
++    }
++    for(int j=0;j<512;j++)
++    {
++        if(buf[j]!=0xff)
++        {
++            goto err;
++        }
++    }
++    close(fd);
++    if(mfreeblk(buf,0x1000)==SYSSTUSERR)
++    {
++        goto err;
++    }
++    return;
++err:
++    printf("usr_read_file err\n\r");
++    for(;;);
++    return;
++}
++
+
++void task1_main()
++{
++    int i=0;
++
++    times_t timet;
++
++    usr_write_file();
++    usr_read_file();
++
++    for(;;)
++    {
++      i++;
++
++      printf("task1 run %x task1ID:%x\n\r",i,pid(NULL));
++      time(&timet);
++      printf("year:%d mon:%d date:%d hour:%d min:%d sec:%d\n\r",
++      timet.year,timet.mon,timet.date,timet.hour,timet.min,timet.sec);
++    }
++    return;
++}
++
++void task0_main()
++{
++    times_t timet;
++    int i=0;
++    for(;;)
++    {
++    i++;
++    printf("task0 run %x task0ID:%x \n\r",i,pid(NULL));
++    gettime(&timet);
++    printf("year:%d mon:%d date:%d hour:%d min:%d sec:%d\n\r",
++     timet.year,timet.mon,timet.date,timet.hour,timet.min,timet.sec);
++    }
++    return;
++}
++
++void task2_main()
++{
++    times_t timet;
++    timet.year=14;
++    timet.mon=9;
++    timet.day=4;
++
++    timet.date=11;
++    timet.hour=12;
++    timet.min=30;
++    timet.sec=00;
++
++    settime(&timet);
++    int i=0;
++    for(;;)
++    {
++    i++;
++    printf("task2 run %x task2ID:%x \n\r",i,pid(NULL));
++    gettime(&timet);
++    printf("year:%d mon:%d date:%d hour:%d min:%d sec:%d\n\r",
++     timet.year,timet.mon,timet.date,timet.hour,timet.min,timet.sec);
++    }
++    return;
++}
+
+./kernel/task.c-35-void task2()
+./kernel/task.c-36-{
+./kernel/task.c:37:    thread_t* thp= krlnew_thread((void*)task2_main,0,PRILG_USR,PRITY_MIN,0,0);
+./kernel/task.c-38-    if(thp==NULL)
+./kernel/task.c-39-    {
+./kernel/task.c-40-        hal_sysdie("task2 err");
+./kernel/task.c-41-    }
+./kernel/task.c-42-
+./kernel/task.c-43-    return;
+
+void init_task()
+{
+    task0();
+    task1();
+    /*task2();
+    task3();
+    task4();
+    task5();
+   */
+    return;
+}
+./kernel/krlinit.c-14-  init_krlsched();
+./kernel/krlinit.c-15-
+./kernel/krlinit.c-16-    init_ktime();
+./kernel/krlinit.c:17:    init_task();
+./kernel/krlinit.c-18-    init_krlcpuidle();
+./kernel/krlinit.c-19-    hal_sysdie("LMOSEM KERNEL LAYER RUN!!");
+./kernel/krlinit.c-20-    return;
+./kernel/krlinit.c-21-}
+void init_krl()
+{
+    init_krlmm();
+        init_krldevice();
+    init_krldriver();
+        init_krlsched();
+
+    init_ktime();
+    init_task();
+    init_krlcpuidle();
+    hal_sysdie("LMOSEM KERNEL LAYER RUN!!");
+    return;
+}
+
+./hal/x86/lmosemhal_start.c-9-LKHEAD_T void lmosemhal_start()
+./hal/x86/lmosemhal_start.c-10-{
+./hal/x86/lmosemhal_start.c-11-         init_hal();
+./hal/x86/lmosemhal_start.c:12:    init_krl();
+./hal/x86/lmosemhal_start.c-13- //for(;;);
+./hal/x86/lmosemhal_start.c-14-    return;
+./hal/x86/lmosemhal_start.c-15-}
+
++SECTIONS
++{
++
++
++        . = 0x30008000;
++        __begin_kernel = .;
++        __begin_lmosem_hal_head_text = .;
++        .head.text ALIGN(4) : { *(.head.text) }
++        __end_lmosem_hal_head_text = .;
++
++        __begin_lmosem_hal_head_data = .;
++        .head.data ALIGN(4) : { *(.head.data) }
++        __end_lmosem_hal_head_data = .;
++
++        __begin_lmosem_hal_init = .;
++        .lmosem_hal.init ALIGN(4) : { *(.lmosem_hal.init) }
++        __end_lmosem_hal_init = .;
++
++        __begin_lmosem_hal_vector = .;
++        .lmosem_hal.vector ALIGN(4) : { *(.lmosem_hal.vector) }
++        __end_lmosem_hal_vector = .;
++
++        __begin_lmosem_hal_intvect = .;
++        .lmosem_hal.intvect ALIGN(4) : { *(.lmosem_hal.intvect) }
++        __end_lmosem_hal_intvect = .;
++
++        __begin_text = .;
++        .text ALIGN(4) : { *(.text) }
++        __end_text = .;
++
++        __begin_data = .;
++        .data ALIGN(4) :{ *(.data) }
++        __end_data = .;
++
++        __begin_rodata = .;
++        .rodata ALIGN(4) :{ *(.rodata) *(.rodata.*) }
++        __end_rodata = .;
++
++        __begin_kstrtab = .;
++        .kstrtab ALIGN(4) : { *(.kstrtab) }
++        __end_kstrtab = .;
++
++        __begin_bss = .;
++        .bss ALIGN(4) : { *(.bss) }
++        __end_bss = .;
++        __end_kernel = .;
++
++         /DISCARD/ : { *(.dynstr*) }
++         /DISCARD/ : { *(.dynamic*) }
++         /DISCARD/ : { *(.plt*) }
++         /DISCARD/ : { *(.interp*) }
++         /DISCARD/ : { *(.gnu*) }
++}
+
+./lib/libwrite.c-1-#include "libc.h"
+./lib/libwrite.c:2:sysstus_t write(hand_t fhand,buf_t buf,size_t len,uint_t flgs)
+./lib/libwrite.c-3-{
+./lib/libwrite.c:4:    sysstus_t rets=api_write(fhand,buf,len,flgs);
+./lib/libwrite.c-5-    return rets;
+./lib/libwrite.c-6-}
+
+./lib/lapiwrite.c:10:sysstus_t api_write(hand_t fhand,buf_t buf,size_t len,uint_t flgs)
+./lib/lapiwrite.c-11-{
+./lib/lapiwrite.c-12-    sysstus_t rets;
+./lib/lapiwrite.c-13-    API_ENTRY_PARE4(SNR_FS_WRITE,rets,fhand,buf,len,flgs);
+./lib/lapiwrite.c-14-    return rets;
+./lib/lapiwrite.c-15-}
+
++char* number(char* str,uint_t n, sint_t base)
++{
++       register char *p;
++       char strbuf[36];
++    p = &strbuf[36];
++    *--p = 0;
++       if(n == 0)
++    {
++           *--p = '0';
++    }
++    else
++    {
++         do
++         {
++               *--p = "0123456789abcdef"[n % base];
++         }while( n /= base);
++    }
++    while(*p!=0)
++    {
++               *str++=*p++;
++       }
++    return str;
++}
+
++void vsprintf(char* buf,const char* fmt,va_list args)
++{
++       char* p =buf;
++       va_list next_arg=args;
++       while(*fmt)
++       {
++               if(*fmt != '%')
++               {
++                       *p++ = *fmt++;
++                       continue;
++               }
++               fmt++;
++               switch(*fmt)
++               {
++                       case 'x':
++                               p=number(p,va_arg(next_arg,uint_t),16);
++                               fmt++;
++
++                               break;
++                       case 'd':
++                               p=number(p,va_arg(next_arg,uint_t),10);
++
++                               fmt++;
++                               break;
++                       case 's':
++                              p=strcopy(p,(char*)va_arg(next_arg,uint_t));
++
++                              fmt++;
++                              break;
++                       default:
++                               break;
++               }
++       }
++       *p=0;
++       return;
++}
+
++int printf(const char* fmt,...)
++{
++    int rets=-1;
++    va_list ap;
++    va_start(ap,fmt);
++       char* buf=(char*)mallocblk(0x1000);
++       if(buf==NULL)
++       {
++        return -1;
++       }
++    devid_t dev;
++    dev.dev_mtype=UART_DEVICE;
++    dev.dev_stype=0;
++    dev.dev_nr=0;
++    hand_t fd=open(&dev,RW_FLG|FILE_TY_DEV,0);
++    if(fd==-1)
++    {
++        rets=-1;
++        goto res_step;
++    }
++       vsprintf(buf,fmt,ap);
++       if(write(fd,buf,strlen(buf),0)==SYSSTUSERR)
++       {
++        rets=-1;
++        goto res_step;
++       }
++       close(fd);
++
++       rets=0;
++res_step:
++
++
++       if(mfreeblk(buf,0x1000)==SYSSTUSERR)
++       {
++        rets=-1;
++       }
++
++    va_end(ap);
++       return rets;
++}
++
++char* strcopy(char* buf,char* str_s)
++{
++       while(*str_s)
++       {
++               *buf=*str_s;
++               buf++;
++               str_s++;
++       }
++       return buf;
++}
+
++uint_t strlen(char* str_s)
++{
++       sint_t chaidx=0;
++       while(*str_s!=0)
++       {
++               str_s++;
++               chaidx++;
++       }
++       return chaidx;
++}
++sysstus_t gettime(times_t* ttime)
++{
++    if(ttime==NULL)
++    {
++        return SYSSTUSERR;
++    }
++    devid_t dev;
++    dev.dev_mtype=RTC_DEVICE;
++    dev.dev_stype=0;
++    dev.dev_nr=0;
++    hand_t fd=open(&dev,RW_FLG|FILE_TY_DEV,0);
++    if(fd==-1)
++    {
++        return SYSSTUSERR;
++    }
++
++    read(fd,ttime,sizeof(times_t),0);
++
++    close(fd);
++
++    return SYSSTUSOK;
++}
++void* mallocblk(size_t blksz)
++{
++    void* retadr=api_mallocblk(blksz);
++    return retadr;
++}
++
++sysstus_t mfreeblk(void* fradr,size_t blksz)
++{
++    sysstus_t retstus=api_mfreeblk(fradr,blksz);
++
++    return retstus;
++}
+
++void krlwlst_allup(kwlst_t* wlst)
++{
++    while(list_is_empty_careful(&wlst->wl_list)==FALSE)
++    {
++        krlsched_up(wlst);
++
++    }
++    return;
++}
++
++void krlwlst_add_thread(kwlst_t* wlst,thread_t* tdp)
++{
++    cpuflg_t cufg;
++    hal_spinlock_saveflg_cli(&wlst->wl_lock,&cufg);
++
++    list_add(&tdp->td_list,&wlst->wl_list);
++    wlst->wl_tdnr++;
++    hal_spinunlock_restflg_sti(&wlst->wl_lock,&cufg);
++    return;
++}
++
++thread_t* krlwlst_del_thread(kwlst_t *wlst)
++{
++
++    thread_t* tdp=NULL;
++    cpuflg_t cufg;
++    list_h_t* list;
++    hal_spinlock_saveflg_cli(&wlst->wl_lock,&cufg);
++    list_for_each(list,&wlst->wl_list)
++    {
++        tdp=list_entry(list,thread_t,td_list);
++        if(tdp==NULL||wlst->wl_tdnr<1)
++        {
++            tdp=NULL;
++            goto return_step;
++        }
++        list_del(&tdp->td_list);
++        wlst->wl_tdnr--;
++        tdp=tdp;
++        goto return_step;
++
++    }
++    tdp=NULL;
++return_step:
++    hal_spinunlock_restflg_sti(&wlst->wl_lock,&cufg);
++    return tdp;
++}
+
++void kwlst_t_init(kwlst_t* initp)
++{
++    hal_spinlock_init(&initp->wl_lock);
++    initp->wl_tdnr=0;
++    list_init(&initp->wl_list);
++    return;
++}
++void krlwlst_wait(kwlst_t* wlst)
++{
++    krlsched_wait(wlst);
++    return;
++}
++void krlwlst_up(kwlst_t* wlst)
++{
++    if(list_is_empty_careful(&wlst->wl_list)==TRUE)
++    {
++        return;
++    }
++    krlsched_up(wlst);
+++void kwlst_t_init(kwlst_t* initp)
++{
++    hal_spinlock_init(&initp->wl_lock);
++    initp->wl_tdnr=0;
++    list_init(&initp->wl_list);
++    return;
++}
++void krlwlst_wait(kwlst_t* wlst)
++{
++    krlsched_wait(wlst);
++    return;
++}
++void krlwlst_up(kwlst_t* wlst)
++{
++    if(list_is_empty_careful(&wlst->wl_list)==TRUE)
++    {
++        return;
++    }
++    krlsched_up(wlst);
++
++    return;
++}
++    return;
++}
++void ktime_t_init(ktime_t* initp)
++{
++    hal_spinlock_init(&initp->kt_lock);
++    initp->kt_year=0;
++    initp->kt_mon=0;
++    initp->kt_day=0;
++    initp->kt_date=0;
++    initp->kt_hour=0;
++    initp->kt_min=0;
++    initp->kt_sec=0;
++    initp->kt_datap=NULL;
++    return;
++}
++
++void init_ktime()
++{
++    ktime_t_init(&osktime);
++    return;
++}
++
++
++void krlupdate_times(uint_t year,uint_t mon,uint_t day,uint_t date,uint_t hour,uint_t min,uint_t sec)
++{
++    ktime_t* initp=&osktime;
++    cpuflg_t cpufg;
++    hal_spinlock_saveflg_cli(&initp->kt_lock,&cpufg);
++    initp->kt_year=year;
++    initp->kt_mon=mon;
++    initp->kt_day=day;
++    initp->kt_date=date;
++    initp->kt_hour=hour;
++    initp->kt_min=min;
++    initp->kt_sec=sec;
++    hal_spinunlock_restflg_sti(&initp->kt_lock,&cpufg);
++    return;
++}
++
++
++sysstus_t krlsvetabl_time(uint_t swinr,stkparame_t* stkparv)
++{
++    if(swinr!=SNR_TIME)
++    {
++        return SYSSTUSERR;
++    }
++    return krlsve_time((time_t*)stkparv->parmv1);
++}
+
++sysstus_t krlsvetabl_time(uint_t swinr,stkparame_t* stkparv)
++{
++    if(swinr!=SNR_TIME)
++    {
++        return SYSSTUSERR;
++    }
++    return krlsve_time((time_t*)stkparv->parmv1);
++}
++
++sysstus_t krlsve_time(time_t* time)
++{
++    if(time==NULL)
++    {
++        return SYSSTUSERR;
++    }
++
++    ktime_t* initp=&osktime;
++    cpuflg_t cpufg;
++    hal_spinlock_saveflg_cli(&initp->kt_lock,&cpufg);
++    time->year=initp->kt_year;
++    time->mon=initp->kt_mon;
++    time->day=initp->kt_day;
++    time->date=initp->kt_date;
++    time->hour=initp->kt_hour;
++    time->min=initp->kt_min;
++    time->sec=initp->kt_sec;
++    hal_spinunlock_restflg_sti(&initp->kt_lock,&cpufg);
++
++
++    return SYSSTUSOK;
++}
+
++void micrstk_t_init(micrstk_t* initp)
++{
++    for(uint_t i=0;i<MICRSTK_MAX;i++)
++    {
++        initp->msk_val[i]=0;
++    }
++    return;
++}
++
++void context_t_init(context_t* initp)
++{
++    initp->ctx_usrsp=0;
++    initp->ctx_svcsp=0;
++    initp->ctx_svcspsr=0;
++    initp->ctx_cpsr=0;
++    initp->ctx_lr=0;
++
++    return;
++}
++uint_t krlretn_thread_id(thread_t* tdp)
++{
++       return (uint_t)tdp;
++}
++void thread_t_init(thread_t* initp)
++{
++    hal_spinlock_init(&initp->td_lock);
++    list_init(&initp->td_list);
++    initp->td_flgs=0;
++    initp->td_stus=TDSTUS_NEW;
++    initp->td_cpuid=hal_retn_cpuid();
++    initp->td_id=krlretn_thread_id(initp);
++    initp->td_tick=0;
++    initp->td_privilege=PRILG_USR;
++    initp->td_priority=PRITY_MIN;
++    initp->td_runmode=0;
++    initp->td_krlstktop=NULL;
++    initp->td_krlstkstart=NULL;
++    initp->td_usrstktop=NULL;
++    initp->td_usrstkstart=NULL;
++
++    initp->td_mmdsc=NULL;
++    initp->td_resdsc=NULL;
++    initp->td_privtep=NULL;
++    initp->td_extdatap=NULL;
++    context_t_init(&initp->td_context);
++    for(uint_t hand=0;hand<TD_HAND_MAX;hand++)
++    {
++        initp->td_handtbl[hand]=NULL;
++    }
++    return;
++}
++
++thread_t* krlnew_thread_dsc()
++{
++    thread_t* rettdp=(thread_t*)(krlnew((size_t)(sizeof(thread_t))));
++    if(rettdp==NULL)
++    {
++        return NULL;
++    }
++    thread_t_init(rettdp);
++    return rettdp;
++}
++void krlthd_inc_tick(thread_t* thdp)
++{
++
++    cpuflg_t cpuflg;
++    hal_spinlock_saveflg_cli(&thdp->td_lock,&cpuflg);
++    thdp->td_tick++;
++    if(thdp->td_tick>TDRUN_TICK)
++    {
++        thdp->td_tick=0;
++        krlsched_set_schedflgs();
++    }
++    hal_spinunlock_restflg_sti(&thdp->td_lock,&cpuflg);
++    return;
++}
++
++hand_t krlthd_retn_nullhand(thread_t* thdp)
++{
++    cpuflg_t cpuflg;
++    hand_t rethd=NO_HAND;
++    hal_spinlock_saveflg_cli(&thdp->td_lock,&cpuflg);
++    for(uint_t hand=0;hand<TD_HAND_MAX;hand++)
++    {
++        if(thdp->td_handtbl[hand]==NULL)
++        {
++            rethd=(hand_t)hand;
++            goto retn_step;
++        }
++    }
++    rethd=NO_HAND;
++retn_step:
++    hal_spinunlock_restflg_sti(&thdp->td_lock,&cpuflg);
++    return rethd;
++}
++
++hand_t krlthd_add_objnode(thread_t* thdp,objnode_t* ondp)
++{
++    cpuflg_t cpuflg;
++    hand_t rethd=NO_HAND;
++    hal_spinlock_saveflg_cli(&thdp->td_lock,&cpuflg);
++    for(uint_t hand=0;hand<TD_HAND_MAX;hand++)
++    {
++        if(thdp->td_handtbl[hand]==NULL)
++        {
++            rethd=(hand_t)hand;
++            goto next_step;
++        }
++    }
++    rethd=NO_HAND;
++    goto retn_step;
++
++next_step:
++    thdp->td_handtbl[rethd]=ondp;
++retn_step:
++    hal_spinunlock_restflg_sti(&thdp->td_lock,&cpuflg);
++    return rethd;
++}
+
++void krlsem_t_init(sem_t* initp)
++{
++    hal_spinlock_init(&initp->sem_lock);
++    initp->sem_flg=0;
++    initp->sem_count=0;
++    kwlst_t_init(&initp->sem_waitlst);
++    return;
++}
++
++void krlsem_set_sem(sem_t* setsem,uint_t flg,sint_t conut)
++{
++    cpuflg_t cpufg;
++
++    hal_spinlock_saveflg_cli(&setsem->sem_lock,&cpufg);
++    setsem->sem_flg=flg;
++    setsem->sem_count=conut;
++    hal_spinunlock_restflg_sti(&setsem->sem_lock,&cpufg);
++    return;
++}
++
++void krlsem_down(sem_t* sem)
++{
++    cpuflg_t cpufg;
++start_step:
++    hal_spinlock_saveflg_cli(&sem->sem_lock,&cpufg);
++    if(sem->sem_count<1)
++    {
++
++        krlwlst_wait(&sem->sem_waitlst);
++        hal_spinunlock_restflg_sti(&sem->sem_lock,&cpufg);
++        krlschedul();
++        goto start_step;
++    }
++    sem->sem_count--;
++    hal_spinunlock_restflg_sti(&sem->sem_lock,&cpufg);
++    return;
++}
++
++void krlsem_up(sem_t* sem)
++{
++    cpuflg_t cpufg;
++
++    hal_spinlock_saveflg_cli(&sem->sem_lock,&cpufg);
++    sem->sem_count++;
++    if(sem->sem_count<1)
++    {
++        hal_spinunlock_restflg_sti(&sem->sem_lock,&cpufg);
++        hal_sysdie("sem up err");
++    }
++    krlwlst_allup(&sem->sem_waitlst);
++    hal_spinunlock_restflg_sti(&sem->sem_lock,&cpufg);
++
++    krlsched_set_schedflgs();
++    return;
++}
+
++void krlsched_up(kwlst_t* wlst)
++{
++    cpuflg_t cufg,tcufg;
++    uint_t cpuid=hal_retn_cpuid();
++    schdata_t* schdap=&osschedcls.scls_schda[cpuid];
++    thread_t* tdp;
++    uint_t pity;
++    if(wlst==NULL)
++    {
++        goto err_step;
++    }
++    tdp=krlwlst_del_thread(wlst);
++    if(tdp==NULL)
++    {
++       goto err_step;
++    }
++    pity=tdp->td_priority;
++    if(pity>=PRITY_MAX)
++    {
++        goto err_step;
++    }
++    hal_spinlock_saveflg_cli(&schdap->sda_lock,&cufg);
++    hal_spinlock_saveflg_cli(&tdp->td_lock,&tcufg);
++    tdp->td_stus=TDSTUS_RUN;
++    hal_spinunlock_restflg_sti(&tdp->td_lock,&tcufg);
++    list_add_tail(&tdp->td_list,&(schdap->sda_thdlst[pity].tdl_lsth));
++    schdap->sda_thdlst[pity].tdl_nr++;
++    hal_spinunlock_restflg_sti(&schdap->sda_lock,&cufg);
++
++    return;
++err_step:
++    hal_sysdie("krlsched_up err");
++    return;
++}
+
++void lmos_dspversion()
++{
++    pixl_t bkpx=set_deffontpx(BGRA(0xff,0,0));
++    kprint(lmos_version);
++    kprint("系统处理器工作模式:%d位 系统物理内存大小:%dMB\n",(uint_t)kmachbsp.mb_cpumode,(uint_t)(kmachbsp.mb_memsz>>20));
++    set_deffontpx(bkpx);
++    return;
++}
+
++void hal_disable_fiq()
++{
++    __asm__ __volatile__(
++         "mrs r0,cpsr \n\t"
++         "orr r0,r0,%[closefiq]\n\t"
++         "msr cpsr,r0 \n\t"
++         :
++         : [closefiq] "I" (CFIQ)
++         : "r0","cc","memory"
++    );
++    return;
++}
++
++void hal_enable_fiq()
++{
++    __asm__ __volatile__(
++         "mrs r0,cpsr \n\t"
++         "bic r0,r0,%[openfiq]\n\t"
++         "msr cpsr,r0 \n\t"
++         :
++         : [openfiq] "I" (CFIQ)
++         : "r0","cc","memory"
++    );
++    return;
++}
++
++void hal_disable_irq()
++{
++    __asm__ __volatile__(
++         "mrs r0,cpsr \n\t"
++         "orr r0,r0,%[closeirq]\n\t"
++         "msr cpsr,r0 \n\t"
++         :
++         : [closeirq] "I" (CIRQ)
++         : "r0","cc","memory"
++    );
++    return;
++}
+
++void hal_enable_irq()
++{
++    __asm__ __volatile__(
++         "mrs r0,cpsr \n\t"
++         "bic r0,r0,%[openirq]\n\t"
++         "msr cpsr,r0 \n\t"
++         :
++         : [openirq] "I" (CIRQ)
++         : "r0","cc","memory"
++    );
++    return;
++}
+
++
++void hal_spinlock_init(spinlock_t* lock)
++{
++    __asm__ __volatile__(
++         "swp %[lockval],%[lockval],[%[lockadr]] \n\t"
++
++         :
++         : [lockval] "r"(0),[lockadr] "r" (&lock->lock)
++         : "memory"
++    );
++    return;
++}
++
++void hal_spinlock_lock(spinlock_t* lock)
++{
++    __asm__ __volatile__(
++         "mov r8,#1 \n\t"
++         "1:swp r7,r8,[%[lockadr]] \n\t"
++         "cmp r7,#0 \n\t"
++         "bne 1b \n\t"
++         :
++         : [lockadr] "r" (&lock->lock)
++         : "r7","r8","cc","memory"
++    );
++    return;
++}
++
++void hal_spinlock_unlock(spinlock_t* lock)
++{
++    __asm__ __volatile__(
++         "swp %[lockval],%[lockval],[%[lockadr]] \n\t"
++
++         :
++         : [lockval] "r"(0),[lockadr] "r" (&lock->lock)
++         : "memory"
++    );
++    return;
++}
+
++void hal_memset(void* setp,size_t n,u8_t setval)
++{
++    u8_t* _p=(u8_t*)setp;
++    for(uint_t i=0;i<n;i++)
++    {
++        _p[i]=setval;
++    }
++    return;
++}
++
++void hal_memcpy(void* src,void* dst,size_t n)
++{
++    u8_t* _s=(u8_t*)src,*_d=(u8_t*)dst;
++    for(uint_t i=0;i<n;i++)
++    {
++        _d[i]=_s[i];
++    }
++    return;
++}
+
++void hal_sysdie(char_t* errmsg)
++{
++    printfk("LMOSEM SYSTEM IS DIE %s",errmsg);
++    for(;;);
++    return;
++}
++
++void system_error(char_t* errmsg)
++{
++    hal_sysdie(errmsg);
++    return;
++}
++
++uint_t hal_retn_cpuid()
++{
++    return 0;
++}
+
++HAL_DEFGLOB_VARIABLE(phyadrspce_t,machadrspce)[PLFM_ADRSPCE_NR]={
++{ADRSPCE_NORFLASH,0,0,0x001fffff},
++{ADRSPCE_IO,0,0x08000000,0x0800000f},
++{ADRSPCE_IO,0,0x10000000,0x1000000f},
++{ADRSPCE_IO,0,0x19000000,0x190fffff},
++{ADRSPCE_IO,0,0x20000000,0x2000000f},
++{ADRSPCE_IO,0,0x28000000,0x28000007},
++{ADRSPCE_IO,0,0x29000000,0x29000007},
++{ADRSPCE_SDRAM,0,0x30000000,0x33ffffff},
++{ADRSPCE_IO,0,0x48000000,0x48000030},
++{ADRSPCE_IO,0,0x49000000,0x49000058},
++{ADRSPCE_IO,0,0x4a000000,0x4a00001c},
++{ADRSPCE_IO,0,0x4b000000,0x4b0000e0},
++{ADRSPCE_IO,0,0x4c000000,0x4c000018},
++{ADRSPCE_IO,0,0x4d000000,0x4d000060},
++{ADRSPCE_IO,0,0x4e000000,0x4e00003c},
++{ADRSPCE_IO,0,0x4f000000,0x4f0000a0},
++{ADRSPCE_IO,0,0x50000000,0x50008028},
++{ADRSPCE_IO,0,0x51000000,0x51000040},
++{ADRSPCE_IO,0,0x52000000,0x5200026f},
++{ADRSPCE_IO,0,0x53000000,0x53000008},
++{ADRSPCE_IO,0,0x54000000,0x54000010},
++{ADRSPCE_IO,0,0x55000000,0x55000012},
++{ADRSPCE_IO,0,0x56000000,0x560000cc},
++{ADRSPCE_IO,0,0x57000040,0x5700008b},
++{ADRSPCE_IO,0,0x58000000,0x58000014},
++{ADRSPCE_IO,0,0x59000000,0x59000034},
++{ADRSPCE_IO,0,0x5a000000,0x5a000043},
++{ADRSPCE_IO,0,0x5b000000,0x5b00001c},
++{ADRSPCE_NOT,DEV_TYPE_NOT,0,0}};
+
++void disp_mbsp(machbstart_t* mbsp)
++{
++    printfk("LMOS内核镜像地址:%x\n",mbsp->mb_lmosimgpadr);
++    printfk("LMOS内核镜像大小:%x\n",mbsp->mb_lmosimgsz);
++    printfk("LMOS内核地址:%x\n",mbsp->mb_krlimgpadr);
++    printfk("LMOS内核大小:%x\n",mbsp->mb_krlsz);
++    printfk("物理内存地址区间结构地址:%x\n",mbsp->mb_e820padr);
++    printfk("物理内存地址区间结构个数:%x\n",mbsp->mb_e820nr);
++    printfk("mbsp->mb_e820sz:%x\n",mbsp->mb_e820sz);
++    printfk("mbsp->mb_nextwtpadr:%x\n",mbsp->mb_nextwtpadr);
++    printfk("mbsp->mb_kalldendpadr:%x\n",mbsp->mb_kalldendpadr);
++    printfk("内核初始化虚拟空间页表地址:%x\n",mbsp->mb_pml4padr);
++    printfk("mbsp->mb_subpageslen:%x\n",mbsp->mb_subpageslen);
++    printfk("内核初始化虚拟空间映射大小:%x\n",mbsp->mb_kpmapphymemsz);
++    printfk("系统处理器工作模式:%x\n",mbsp->mb_cpumode);
++    printfk("系统物理内存大小:%x\n",mbsp->mb_memsz);
++    printfk("内核初始化栈地址:%x\n",mbsp->mb_krlinitstack);
++    printfk("内核初始化栈大小:%x\n",mbsp->mb_krlitstacksz);
++    printfk("内核默认字体地址:%x\n",mbsp->mb_bfontpadr);
++    printfk("内核默认字体大小:%x\n",mbsp->mb_bfontsz);
++    //flush_videoram(&kdftgh);
++    //die(0);
++    return;
++}
+
++LKHEAD_T void init_hal()
++{
++
++    init_paltform();
++    move_lmosimg2maxpadr(&kmachbsp);
++    //init_haluart();
++    //init_halmach();
++    init_halmm();
++    init_halintupt();
++    //print_mach(&osmach);
++    //print_mmapdsc(&osmach);
++    //disp_mbspex(&kmachbsp);
++    //printfk("LMOSEM IS RUN\n");
++    //init_8254();
++    init_i8259();
++    i8259_enabled_line(0);
++    //STI();
++    //for(;;);
++    //test_blkmm();
++    return;
++}
+
++PUBLIC void phymmarge_t_init(phymmarge_t* initp)
++{
++    if(NULL==initp)
++    {
++        return;
++    }
++    hal_spinlock_init(&initp->pmr_lock);
++    initp->pmr_type=0;
++    initp->pmr_stype=0;
++    initp->pmr_dtype=0;
++    initp->pmr_flgs=0;
++    initp->pmr_stus=0;
++    initp->pmr_saddr=0;
++    initp->pmr_lsize=0;
++    initp->pmr_end=0;
++    initp->pmr_rrvmsaddr=0;
++    initp->pmr_rrvmend=0;
++    initp->pmr_prip=NULL;
++    initp->pmr_extp=NULL;
++    return;
++}
++void init_halmm()
++{
++    init_phymmarge();
++    init_memmgr();
++    //init_mmapdsc(&osmach);
++    //init_phymem();
++    //!!下面这个函数要格外注意！！！
++    //onmmapdsc_inkrlram(&osmach,&osphymem);
++    return;
++}
+
++PUBLIC LKINIT void  init_8254()
++{
++
++       out_u8_p(PTIPROTM,TIMEMODE);
++
++
++       out_u8_p(PTIPROT1,HZLL);
++
++       out_u8_p(PTIPROT1,HZHH);
++
++
++       return;
++}
+
++PUBLIC LKINIT void init_i8259()
++{
++
++
++               out_u8_p(ZIOPT,ICW1);
++               out_u8_p(SIOPT,ICW1);
++               out_u8_p(ZIOPT1,ZICW2);
++               out_u8_p(SIOPT1,SICW2);
++               out_u8_p(ZIOPT1,ZICW3);
++               out_u8_p(SIOPT1,SICW3);
++               out_u8_p(ZIOPT1,ICW4);
++               out_u8_p(SIOPT1,ICW4);
++               //system_error("8259dddddddddddddd");
++
++       out_u8_p(ZIOPT1,0xff);
++       out_u8_p(SIOPT1,0xff);
++       //printf("  init i8259!!\n");
++       return;
++}
++
++PUBLIC void i8259_send_eoi()
++{
++        out_u8_p(_INTM_CTL,_EOI);
++         out_u8_p(_INTS_CTL,_EOI);
++       return;
++}
++
++PUBLIC void i8259_enabled_line(u32_t line)
++{
++       u32_t flags;
++       save_flags_cli(&flags);
++        if(line<8)
++        {
++                u8_t amtmp=in_u8(_INTM_CTLMASK);
++                amtmp&=(u8_t)(~(1<<line));
++                out_u8_p(_INTM_CTLMASK,amtmp);
++        }
++        else
++        {
++                u8_t astmp=in_u8(_INTM_CTLMASK);
++                astmp&=(u8_t)(~(1<<2));
++                out_u8_p(_INTM_CTLMASK,astmp);
++               astmp=in_u8(_INTS_CTLMASK);
++                astmp&=(u8_t)(~(1<<(line-8)));
++                out_u8_p(_INTS_CTLMASK,astmp);
++        }
++        restore_flags_sti(&flags);
++        return;
++}
+
++PUBLIC void i8259_save_disableline(u64_t* svline,u32_t line)
++{
++       u32_t intftmp;
++       u32_t flags;
++       save_flags_cli(&flags);
++       u8_t altmp  = in_u8(_INTM_CTLMASK);
++       intftmp=altmp;
++       altmp = in_u8(_INTS_CTLMASK);
++       intftmp=(intftmp<<8)|altmp;
++       *svline=intftmp;
++       i8259_disable_line(line);
++
++       restore_flags_sti(&flags);
++       return;
++}
++
++PUBLIC void i8259_rest_enabledline(u64_t* svline,u32_t line)
++{
++       u32_t flags;
++       save_flags_cli(&flags);
++
++       u32_t intftmp=(u32_t)(*svline);
++
++       u8_t altmp=(intftmp&0xff);
++       out_u8_p(_INTS_CTLMASK,altmp);
++       altmp=(u8_t)(intftmp>>8);
++       out_u8_p(_INTM_CTLMASK,altmp);
++
++       restore_flags_sti(&flags);
++
++       return;
++}
+
++%define MBSP_ADR 0x100000
++%define IA32_EFER 0C0000080H
++%define PML4T_BADR 0x1000000      ;0x20000;0x5000
++%define KRLVIRADR 0xffff800000000000
++%define KINITSTACK_OFF 16
++global _start
++extern lmosemhal_start
++[section .head.text]
++[bits 32]
++_start:
++_entry:
++        cli
++        lgdt [GDT_PTR]
++        lidt [IDT_PTR]
++        jmp dword 0x8 :_32bits_mode
++
++_32bits_mode:
++        mov ax, 0x10    ; 数据段选择子(目的)
++        mov ds, ax
++        mov ss, ax
++        mov es, ax
++        mov fs, ax
++        mov gs, ax
++        xor eax,eax
++        xor ebx,ebx
++        xor ecx,ecx
++        xor edx,edx
++        xor edi,edi
++        xor esi,esi
++        xor ebp,ebp
++        xor esp,esp
++        mov ebx,MBSP_ADR
++        mov ecx,[ebx+KINITSTACK_OFF]
++
++        xor ebx,ebx
++        mov esp,ecx
++        xor ecx,ecx
++        call lmosemhal_start
++        jmp $
++
++GDT_START:
++knull_dsc: dq 0
++kcode_dsc: dq 0x00cf9a000000ffff ;a-e
++kdata_dsc: dq 0x00cf92000000ffff
++k16cd_dsc: dq 0x00009a000000ffff ;a-e
++k16da_dsc: dq 0x000092000000ffff
++GDT_END:
++
++GDT_PTR:
++GDTLEN  dw GDT_END-GDT_START-1  ;GDT界限
++GDTBASE dd GDT_START
++
++IDT_PTR:
++IDTLEN  dw 0x3ff
++IDTBAS  dd 0
+
++void hal_run_intflthandle(uint_t ifdnr,void* sframe)
++{
++    intserdsc_t* isdscp;
++    list_h_t* lst;
++    intfltdsc_t* ifdscp=hal_retn_intfltdsc(ifdnr);
++    if(ifdscp==NULL)
++    {
++        hal_sysdie("hal_run_intfdsc err");
++        return;
++    }
++
++    list_for_each(lst,&ifdscp->i_serlist)
++    {
++        isdscp=list_entry(lst,intserdsc_t,s_list);
++        isdscp->s_handle(ifdnr,isdscp->s_device,sframe);
++    }
++
++    return;
++}
++
++PUBLIC void lmosem_do_hwint(uint_t intnumb,void* krnlsframp)
++{
++       intfltdsc_t* ifdscp=NULL;
++       cpuflg_t cpuflg;
++       if(intnumb>IDTMAX||krnlsframp==NULL)
++       {
++               system_error("lmosem_do_hwint fail\n");
++               return;
++       }
++       ifdscp=hal_retn_intfltdsc(intnumb);
++       if(ifdscp==NULL)
++       {
++               system_error("lmosem_do_hwint ifdscp NULL\n");
++               return;
++       }
++       hal_spinlock_saveflg_cli(&ifdscp->i_lock,&cpuflg);
++       ifdscp->i_indx++;
++       ifdscp->i_deep++;
++       hal_run_intflthandle(intnumb,krnlsframp);
++       //kprint("hwint run irq:%d prity:%d conut:%d\n",ifdscp->i_irqnr,ifdscp->i_prity,(uint_t)ifdscp->i_indx);
++       ifdscp->i_deep--;
++       hal_spinunlock_restflg_sti(&ifdscp->i_lock,&cpuflg);
++       return;
++}
+
++/*PUBLIC void save_interrupt(u32_t* intflags)
++{
++       //flags,
++       u32_t intftmp;
++       u8_t altmp  = in_u8(_INTM_CTLMASK);
++
++       intftmp=altmp;
++       altmp = in_u8(_INTS_CTLMASK);
++       intftmp=(intftmp<<8)|altmp;
++       *intflags=intftmp;
++       return;
++}
++
++PUBLIC void restore_interrupt(u32_t* intflags)
++{
++       u32_t intftmp=*intflags;
++
++       u8_t altmp=(intftmp&0xff);
++       out_u8_p(_INTS_CTLMASK,altmp);
++       altmp=(u8_t)(intftmp>>8);
++       out_u8_p(_INTM_CTLMASK,altmp);
++       return;
++}
++
++PUBLIC void irq_mask(u8_t int_nr)
++{
++       u32_t flags;
++       save_flags_cli(&flags);
++        if(int_nr<8)
++        {
++
++
++                u8_t altmp  = in_u8(_INTM_CTLMASK);
++
++
++                altmp|=(u8_t)(1<<int_nr);
++
++                out_u8_p(_INTM_CTLMASK,altmp);
++               // altmp=;
++                out_u8_p(_INTM_CTL,_EOI);
++        }
++        else
++        {
++                u8_t astmp = in_u8(_INTS_CTLMASK);
++                astmp|=(u8_t)(1<<(int_nr-8));
++                out_u8_p(_INTS_CTLMASK,astmp);
++                //astmp=_EOI;
++                out_u8_p(_INTM_CTL,_EOI);
++                out_u8_p(_INTS_CTL,_EOI);
++        }
++        restore_flags_sti(&flags);
++        return;
++}
+
++PUBLIC void restore_irq_mask(u8_t int_nr)
++{
++       u32_t flags;
++       save_flags_cli(&flags);
++        if(int_nr<8)
++        {
++                u8_t amtmp=in_u8(_INTM_CTLMASK);
++                amtmp&=(u8_t)(~(1<<int_nr));
++                out_u8_p(_INTM_CTLMASK,amtmp);
++        }
++        else
++        {
++                u8_t astmp=in_u8(_INTS_CTLMASK);
++                astmp&=(u8_t)(~(1<<(int_nr-8)));
++                out_u8_p(_INTS_CTLMASK,astmp);
++        }
++        restore_flags_sti(&flags);
++        return;
++}*/
+
++%include "../include/halinc/kernel.inc"
++[section .hwint.text]
++[BITS 32]
++
++ALIGN  16
++exc_divide_error:
++       SRFTFAULT 0
++ALIGN  16
++exc_single_step_exception:
++       SRFTFAULT 1
++ALIGN  16
++exc_nmi:
++       SRFTFAULT 2
++ALIGN  16
++exc_breakpoint_exception:
++       SRFTFAULT 3
++ALIGN  16
++exc_overflow:
++       SRFTFAULT 4
++ALIGN  16
++exc_bounds_check:
++       SRFTFAULT 5
++ALIGN  16
++exc_inval_opcode:
++       SRFTFAULT 6
++ALIGN  16
++exc_copr_not_available:
++       SRFTFAULT 7
++ALIGN  16
++exc_double_fault:
++       SRFTFAULT_ECODE 8
++ALIGN  16
++exc_copr_seg_overrun:
++       SRFTFAULT 9
++ALIGN  16
++exc_inval_tss:
++       SRFTFAULT_ECODE 10
++ALIGN  16
++exc_segment_not_present:
++       SRFTFAULT_ECODE 11
++ALIGN  16
++exc_stack_exception:
++       SRFTFAULT_ECODE 12
++ALIGN  16
++exc_general_protection:
++       SRFTFAULT_ECODE 13
++ALIGN  16
++exc_page_fault:
++       SRFTFAULT_ECODE 14
++ALIGN  16
++exc_copr_error:
++       SRFTFAULT 16
++ALIGN  16
++exc_alignment_check:
++       SRFTFAULT_ECODE 17
++ALIGN  16
++exc_machine_check:
++       SRFTFAULT 18
++ALIGN  16
++hxi_hwint01:
++       HARWINT 21
++ALIGN  16
++hxi_hwint02:
++       HARWINT 22
++ALIGN  16
++hxi_hwint03:
++       HARWINT 23
++ALIGN  16
++hxi_hwint04:
++       HARWINT 24
++ALIGN  16
++hxi_hwint05:
++       HARWINT 25
++ALIGN  16
++hxi_hwint06:
++       HARWINT 26
++ALIGN  16
++hxi_hwint07:
++       HARWINT 27
++ALIGN  16
++hxi_hwint08:
++       HARWINT 28
++ALIGN  16
++hxi_hwint09:
++       HARWINT 29
++ALIGN  16
++hxi_hwint10:
++       HARWINT 30
++ALIGN  16
++hxi_hwint11:
++       HARWINT 31
++ALIGN  16
++hxi_hwint12:
++       HARWINT 32
++
++ALIGN  16
++hxi_hwint13:
++       HARWINT 33
++ALIGN  16
++hxi_hwint14:
++       HARWINT 34
++ALIGN  16
++hxi_hwint15:
++       HARWINT 35
++ALIGN  16
++hxi_hwint16:
++       HARWINT 36
++ALIGN  16
++hxi_hwint17:
++       HARWINT 37
++
++ALIGN  16
++hxi_hwint18:
++       HARWINT 38
++
++ALIGN  16
++hxi_hwint19:
++       HARWINT 39
++
+
++ALIGN  16
++hxi_hwint19:
++       HARWINT 39
++
++ALIGN  16
++hxi_hwint20:
++       HARWINT 40
++
++ALIGN  16
++hxi_hwint21:
++       HARWINT 41
++
++ALIGN  16
++hxi_hwint22:
++       HARWINT 42
++ALIGN  16
++hxi_hwint23:
++       HARWINT 43
++
++ALIGN  16
++hxi_apic_ipi_schedul:
++       HARWINT INT_VECTOR_APIC_IPI_SCHEDUL
++ALIGN  16
++hxi_apic_svr:
++       HARWINT INT_VECTOR_APIC_SVR
++ALIGN  16
++hxi_apic_timer:
++       HARWINT INT_VECTOR_APIC_TIMER
++ALIGN  16
++hxi_apic_thermal:
++       HARWINT INT_VECTOR_APIC_THERMAL
++ALIGN  16
++hxi_apic_performonitor:
++       HARWINT INT_VECTOR_APIC_PERFORM
++ALIGN  16
++hxi_apic_lint0:
++       HARWINT INT_VECTOR_APIC_LINTO
++ALIGN  16
++hxi_apic_lint1:
++       HARWINT INT_VECTOR_APIC_LINTI
++ALIGN  16
++hxi_apic_error:
++       HARWINT INT_VECTOR_APIC_ERROR
++
++ALIGN  16
++exi_sys_call:
++       EXI_SCALL
++ALIGN  16
++_ret_from_user_mode:
++       RECOVER_MASTER_CURRENINT        0
++       RESTOREALL
++
++;stack:
++;      times 4096 dd 0
+
++PUBLIC void kmsob_updata_cache(kmsobmgrhed_t* kmobmgrp,koblst_t* koblp,kmsob_t* kmsp,uint_t flgs)
++{
++       if(KUC_NEWFLG==flgs)
++       {
++               kmobmgrp->ks_msobche=kmsp;
++               koblp->ol_cahe=kmsp;
++               return;
++       }
++       if(KUC_DELFLG==flgs)
++       {
++               kmobmgrp->ks_msobche=kmsp;
++               koblp->ol_cahe=kmsp;
++               return;
++       }
++       if(KUC_DSYFLG==flgs)
++       {
++               if(kmsp==kmobmgrp->ks_msobche)
++               {
++                       kmobmgrp->ks_msobche=NULL;
++               }
++               if(kmsp==koblp->ol_cahe)
++               {
++                       koblp->ol_cahe=NULL;
++               }
++               return;
++       }
++       return;
++}
+
++adr_t krnlvirtadr_to_phyadr(adr_t kviradr)
++{
++       /*if(kviradr<KRNL_MAP_VIRTADDRESS_START||kviradr>KRNL_MAP_VIRTADDRESS_END)
++       {
++               system_error("krnlvirtadr_to_phyadr err\n");
++               return KRNL_ADDR_ERROR;
++       }
++       return kviradr-KRNL_MAP_VIRTADDRESS_START;
++       */
++       return kviradr;
++}
++
++adr_t krnlphyiadr_to_viradr(adr_t kphyadr)
++{
++       /*if(kphyadr>=KRNL_MAP_PHYADDRESS_END)
++       {
++               system_error("krnlphyiadr_to_viradr err\n");
++               return KRNL_ADDR_ERROR;
++       }
++       return kphyadr+KRNL_MAP_VIRTADDRESS_START;
++       */
++       return kphyadr;
++}
+
++LKHEAD_T void lmosemhal_start()
++{
++       init_hal();
++    init_krl();
++       //for(;;);
++    return;
++}
+
++int strcmpl(const char *a,const char *b)
++{
++
++
++      while (*b&& *a && (*b== *a))
++      {
++
++          b++;
++
++          a++;
++
++      }
++
++    return *b - *a;
++}
+
++e820map_t* chk_memsize(e820map_t* e8p,u64_t enr,u64_t sadr,u64_t size)
++{
++    u64_t len=sadr+size;
++    if(enr==0||e8p==NULL)
++    {
++        system_error("279\n");
++        return NULL;
++    }
++    for(u32_t i=0;i<enr;i++)
++    {
++        if(e8p[i].type==RAM_USABLE)
++        {
++            kprint("e8p[%x].saddr:%x ==== e8p[i].saddr+e8p[i].lsize:%x ==== csadr:%x ==== csize:%x ==== len:%x\n",
++                   i,e8p[i].saddr,(e8p[i].saddr+e8p[i].lsize),sadr,size,len);
++            if((sadr>=e8p[i].saddr)&&(len<=(e8p[i].saddr+e8p[i].lsize)))
++            {
++                return &e8p[i];
++            }
++        }
++    }
++    system_error("292\n");
++    return NULL;
++}
+
++int move_krlimg(machbstart_t* mbsp,u64_t cpyadr,u64_t cpysz)
++{
++
++    if(0xffffffff<=(cpyadr+cpysz)||1>cpysz)
++    {
++        return 0;
++    }
++    void* toadr=(void*)((P4K_ALIGN(cpyadr+cpysz)));
++    sint_t tosz=(sint_t)mbsp->mb_lmosimgsz;
++    if(0!=adrzone_is_ok(mbsp->mb_lmosimgpadr,mbsp->mb_lmosimgsz,cpyadr,cpysz))
++    {
++        if(0==chk_memsize((e820map_t*)((u32_t)(mbsp->mb_e820padr)),(u32_t)mbsp->mb_e820nr,(u64_t)((u32_t)toadr),(u64_t)tosz))
++        {
++            return -1;
++        }
++        m2mcopy((void*)((u32_t)mbsp->mb_lmosimgpadr),toadr,tosz);
++        mbsp->mb_lmosimgpadr=(u64_t)(toadr);
++        return 1;
++    }
++    return 2;
++}*/
+
++void disp_memarea(machbstart_t* mbsp)
++{
++       memarea_t* marea=(memarea_t*)krnlphyiadr_to_viradr((adr_t)mbsp->mb_memznpadr);
++       for(uint_t i=0;i<mbsp->mb_memznnr;i++)
++       {
++               kprint("memarea.ma_type:%x,ma_maxpages:%x,ma_freepages:%x,ma_allmsadscnr:%x\n",
++                       marea[i].ma_type,marea[i].ma_maxpages,marea[i].ma_freepages,marea[i].ma_allmsadscnr);
++               for(uint_t oi=0;oi<MDIVMER_ARR_OMAX;oi++)
++               {
++                       disp_bafhlst(&marea[i].ma_mdmdata.dm_mdmonelst[oi]);
++               }
++               /*for(uint_t bi=0;bi<MDIVMER_ARR_BMAX;bi++)
++               {
++                       disp_bafhlst(&marea[i].ma_mdmdata.dm_mdmblklst[bi]);
++               }*/
++               for(uint_t li=0;li<MDIVMER_ARR_LMAX;li++)
++               {
++                       disp_bafhlst(&marea[i].ma_mdmdata.dm_mdmlielst[li]);
++               //if(li<30)
++               //      kprint("1<<li<<10:%x:%x\n",(1UL<<li)<<10,li);
++               }
++               disp_bafhlst(&marea[i].ma_mdmdata.dm_onemsalst);
++       }
++       return;
++}
++PUBLIC void test_divsion_pages()
++{
+
++       //uint_t max=2;
++       test_maxdiv_all();
++       //chek_all_mchkstuc();
++       free_all_mchkstuc();
++
++       /*uint_t pages=1;
++       msadsc_t* retmsa=NULL;
++       u64_t stsc=0,etsc=0;
++       uint_t retpnr=0;
++
++
++
++       stsc=x86_rdtsc();
++       retmsa=mm_division_pages(&lmos_memmgrob, pages,&retpnr, MA_TYPE_KRNL,DMF_RELDIV);
++       etsc=x86_rdtsc();
++       if(NULL==retmsa)
++       {
++               system_error("test_divsion_pages retmsa NULL\n");
++       }
++       write_one_mchkstuc(retmsa,retpnr);
++       kprint("所分配连续物理内存页面的首地址:%x,连续物理内存页面数:%d,连续物理内存大小:%dMB,CPU时钟周期:%d,PAGES:%d\n",
++               ((uint_t)retmsa->md_phyadrs.paf_padrs<<12),(uint_t)retpnr,(uint_t)((retpnr<<12)>>20),(uint_t)(etsc-stsc),(uint_t)pages);
++       */
++       /*uint_t pi=1;pi<max;pi++*/
++       /*uint_t retpnr=0;
++       uint_t max=2;
++       uint_t pages=1;
++       msadsc_t* retmsa=NULL;
++       uint_t stsc=0,etsc=0;
++
++       //kprint("下面开始测试内存分配代码的正确性,根据您的内存容量估算测试时间大约为:%d小时\n您可以选择喝杯茶或者看一
+看窗外的风景.......\n",retn_test_sec());
++       //die(0x800);执行内存分配函数所用的
++       //for(;pages<2000;pages++)
++       {
++       for(;;pages++)
++       {
++               stsc=x86_rdtsc();
++               retmsa=mm_division_pages(&lmos_memmgrob, pages,&retpnr, MA_TYPE_KRNL,DMF_RELDIV);
++               etsc=x86_rdtsc();
++               if(NULL==retmsa)
++               {
++                       break;//system_error("test_divsion_pages retmsa NULL\n");
++               }
++               write_one_mchkstuc(retmsa,retpnr);
++               kprint("所分配连续物理内存页面的首地址:%x,连续物理内存页面数:%d,连续物理内存大小:%dMB,CPU时钟周期:%d,PAGES:%d\n",
++               retmsa->md_phyadrs.paf_padrs<<12,retpnr,(retpnr<<12)>>20,etsc-stsc,pages);
++               if(mm_merge_pages(&lmos_memmgrob,retmsa,retpnr,MA_TYPE_KRNL)==FALSE)
++               {
++                       system_error("test_divsion_pages free FALSE\n");
++               }
++       }
++       }*/
++       //chek_all_mchkstuc();
++       //kprint("剩余物理内存总量:%d页面 :%d逼 :%d兆逼\n",lmos_memmgrob.mo_freepages,lmos_memmgrob.mo_freepages<<PSHRS
+IZE,(lmos_memmgrob.mo_freepages<<PSHRSIZE)>>20);
++       return;
++}
+
+[tong@free ~/Notes/embed/lmosem/build]$
++void disp_memmgrob()
++{
++       /*msadsc_t* retmsa=NULL;
++       uint_t pnr=0;
++       uint_t stsc=0,etsc=0;
++       stsc=x86_rdtsc();
++       retmsa=mm_division_pages(&lmos_memmgrob,2,&pnr,MA_TYPE_KRNL,DMF_RELDIV);
++       etsc=x86_rdtsc();
++       if(NULL==retmsa)
++       {
++               system_error("mm_division_pages fail\n");
++       }
++       list_add(&retmsa->md_list,&lmos_memmgrob.mo_list);
++
++       kprint("所分配连续物理内存页面的首地址:%x,连续物理内存页面数:%x,连续物理内存大小:%dMB,执行内存分配函数所用的CPU
+时钟周期:%d\n",
++               retmsa->md_phyadrs.paf_padrs<<12,pnr,(pnr<<12)>>20,etsc-stsc);
++       */
++       test_divsion_pages();
++       /*kprint("系统物理内存总量:%d页面 :%d逼 :%d兆逼\n",lmos_memmgrob.mo_maxpages,lmos_memmgrob.mo_memsz,lmos_memmgr
+ob.mo_memsz>>20);
++       kprint("使用物理内存总量:%d页面 :%d逼 :%d兆逼\n",lmos_memmgrob.mo_alocpages,lmos_memmgrob.mo_alocpages<<PSHRSIZ
+E,(lmos_memmgrob.mo_alocpages<<PSHRSIZE)>>20);
++       kprint("剩余物理内存总量:%d页面 :%d逼 :%d兆逼\n",lmos_memmgrob.mo_freepages,lmos_memmgrob.mo_freepages<<PSHRSIZ
+E,(lmos_memmgrob.mo_freepages<<PSHRSIZE)>>20);
++       */
++       //kprint("其实还可以有G逼,这里没有逗逼,哈哈哈哈哈~~~~\n");
++       return;
++}
++
++PUBLIC void init_memmgrob()
++{
++       machbstart_t* mbsp=&kmachbsp;
++       memmgrob_t* mobp=&lmos_memmgrob;
++       memmgrob_t_init(mobp);
++       if(NULL==mbsp->mb_e820expadr||0==mbsp->mb_e820exnr)
++       {
++               system_error("mbsp->mb_e820expadr==NULL\n");
++       }
++       if(NULL==mbsp->mb_memmappadr||0==mbsp->mb_memmapnr)
++       {
++               system_error("mbsp->mb_memmappadr==NULL\n");
++       }
++       if(NULL==mbsp->mb_memznpadr||0==mbsp->mb_memznnr)
++       {
++               system_error("mbsp->mb_memznpadr==NULL\n");
++       }
++       mobp->mo_pmagestat=(phymmarge_t*)krnlphyiadr_to_viradr((adr_t)mbsp->mb_e820expadr);
++       mobp->mo_pmagenr=mbsp->mb_e820exnr;
++       mobp->mo_msadscstat=(msadsc_t*)krnlphyiadr_to_viradr((adr_t)mbsp->mb_memmappadr);
++       mobp->mo_msanr=mbsp->mb_memmapnr;
++       mobp->mo_mareastat=(memarea_t*)krnlphyiadr_to_viradr((adr_t)mbsp->mb_memznpadr);
++       mobp->mo_mareanr=mbsp->mb_memznnr;
++       mobp->mo_memsz=mbsp->mb_memmapnr<<PSHRSIZE;
++       mobp->mo_maxpages=mbsp->mb_memmapnr;
++       uint_t aidx=0;
++       for(uint_t i=0;i<mobp->mo_msanr;i++)
++       {
++               if(1==mobp->mo_msadscstat[i].md_indxflgs.mf_uindx&&
++                       MF_MOCTY_KRNL==mobp->mo_msadscstat[i].md_indxflgs.mf_mocty&&
++                       PAF_ALLOC==mobp->mo_msadscstat[i].md_phyadrs.paf_alloc)
++               {
+:+                       aidx++;
++               }
++       }
++       mobp->mo_alocpages=aidx;
++       mobp->mo_freepages=mobp->mo_maxpages-mobp->mo_alocpages;
++       return;
++
++}
+
++LKHEAD_T void s3c2440mmu_enable()
++{
++    __asm__ __volatile__(
++        "mrc p15,0,r0,c1,c0,0 \n\t"
++        "orr r0 ,#1 \n\t"
++        "mcr p15,0,r0,c1,c0,0 \n\t"
++        "nop \n\t"
++        "nop \n\t"
++        "nop \n\t"
++        "nop \n\t"
++        "nop \n\t"
++        "nop \n\t"
++        "nop \n\t"
++        :
++        :
++        : "r0","cc","memory"
++
++    );
++    return;
++}
++
++LKHEAD_T void s3c2440vector_init()
++{
++    s3c2440vector_copy();
++    return;
++}
++LKHEAD_T void s3c2440vector_copy()
++{
++    u32_t* src_t =(u32_t*)(&__end_lmosem_hal_vector);
++    u32_t* src=(u32_t*)(&vector);
++    u32_t* det=(u32_t*)(CPU_VECTOR_VIRADR);
++    for(uint_t i=0;i<4096;i++)
++    {
++        det[i]=0;
++    }
++    for(;src<src_t;src++,det++)
++    {
++        *det=*src;
++    }
++    return;
++}
+
++void printfk(const char_t* fmt,...)
++{
++       char_t buf[512];
++    //cpuflg_t cpuflg;
++    va_list ap;
++    va_start(ap,fmt);
++    //hal_disableirq_savecpuflg(&cpuflg);
++
++       vsprintfk(buf,fmt,ap);
++    //hal_uart_write(0,buf,0);
++    //hal_enableirq_restcpuflg(&cpuflg);
++    gstr_write(&kdftgh,buf);
++    va_end(ap);
++       return;
++}
++
++void kprint(const char_t* fmt,...)
++{
++       char_t buf[512];
++    //cpuflg_t cpuflg;
++    va_list ap;
++    va_start(ap,fmt);
++    //hal_disableirq_savecpuflg(&cpuflg);
++
++       vsprintfk(buf,fmt,ap);
++    //hal_uart_write(0,buf,0);
++    //hal_enableirq_restcpuflg(&cpuflg);
++    gstr_write(&kdftgh,buf);
++    va_end(ap);
++       return;
++}
+
++char_t* strcopyk(char_t* buf,char_t* str_s)
++{
++       while(*str_s)
++       {
++               *buf=*str_s;
++               buf++;
++               str_s++;
++       }
++       return buf;
++}
++
++void vsprintfk(char_t* buf,const char_t* fmt,va_list args)
++{
++       char_t* p =buf;
++       va_list next_arg=args;
++       while(*fmt)
++       {
++               if(*fmt != '%')
++               {
++                       *p++ = *fmt++;
++                       continue;
++               }
++               fmt++;
++               switch(*fmt)
++               {
++                       case 'x':
++                               p=numberk(p,va_arg(next_arg,uint_t),16);
++                               fmt++;
++
++                               break;
++                       case 'd':
++                               p=numberk(p,va_arg(next_arg,uint_t),10);
++                               fmt++;
++                               break;
++                       case 's':
++                              p=strcopyk(p,(char_t*)va_arg(next_arg,uint_t));
++                              fmt++;
++                              break;
++                       default:
++                               break;
++               }
++       }
++       *p=0;
++       return;
++}
+
++char_t* numberk(char_t* str,uint_t n, sint_t base)
++{
++       register char_t *p;
++       char_t strbuf[36];
++    p = &strbuf[36];
++    *--p = 0;
++       if(n == 0)
++    {
++           *--p = '0';
++    }
++    else
++    {
++         do
++         {
++               *--p = "0123456789abcdef"[n % base];
++         }while( n /= base);
++    }
++    while(*p!=0)
++    {
++               *str++=*p++;
++       }
++    return str;
++}
++
++/*void char_write_uart(char_t* buf)
++{
++
++    char_t*p=buf;
++    while(*p)
++    {
++
++          hal_uart0_putc(*p);
++          p++;
++    }
++    return;
++}*/
+
++PUBLIC LKINIT void set_idt_desc(u8_t vector, u8_t desc_type, inthandler_t handler, u8_t privilege)
++{
++       //if(vector>IDTMAX-1)
++       //      error_set(&error,IDT_ERR);
++       GATE *  p_gate  = &IDT[vector];
++       u32_t   base    = (u32_t)handler;
++       p_gate->offset_low      = base & 0xFFFF;
++       p_gate->selector        = SELECTOR_KERNEL_CS;
++       p_gate->dcount          = 0;
++       p_gate->attr            = (u8_t)(desc_type | (privilege << 5));
++       p_gate->offset_high     =(u16_t)((base >> 16) & 0xFFFF) ;
++        return;
++}
+
++/*======================================================================*
++                           seg2phys
++ *----------------------------------------------------------------------*
++ 由段名求绝对地址
++ *======================================================================*/
++/*public u32_t seg2phys(u16_t seg)
++{
++       DESCRIPTOR* p_dest = &QuanJMSF[seg >> 3];
++
++       return (p_dest->base_high << 24) | (p_dest->base_mid << 16) | (p_dest->base_low);
++}
++
++======================================================================*
++                           init_descriptor
++ *----------------------------------------------------------------------*
++ 初始化段描述符
++ *======================================================================*/
++PUBLIC LKINIT void set_igdtr(DESCRIPTOR* gdtptr)
++{
++       if(gdtptr==NULL)
++               system_error("set_igtr gdtptr NULL\n");
++        //iGDT.gdtbass = (u32_t)gdtptr;
++      //  iGDT.gdtLen = sizeof(GDT)-1;
++        return;
++}
++
++PUBLIC LKINIT void set_iidtr(GATE* idtptr)
++{
++       if(idtptr==NULL)
++               system_error("set_iidtr idtptr NULL\n");
++       iIDT.idtbass = (u32_t)idtptr;
++       iIDT.idtLen  = sizeof(IDT)-1;
++       return;
++}
++
++PUBLIC LKINIT void set_descriptor(DESCRIPTOR * p_desc, u32_t base, u32_t limit, u16_t attribute)
++{
++       //if(base !=0 && limit !=0xffffffff)
++       //      error_set(&error,GDT_ERR);
++       p_desc->limit_low               = limit & 0x0FFFF;              // 段界限 1(2 字节)
++       p_desc->base_low                = base & 0x0FFFF;               // 段基址 1(2 字节)
++       p_desc->base_mid                = (base >> 16) & 0x0FF;         // 段基址 2(1 字节)
++       p_desc->attr1                   = (u8_t)(attribute & 0xFF);             // 属性 1
++       p_desc->limit_high_attr2        = (u8_t)(((limit >> 16) & 0x0F)|((attribute >> 8) & 0xF0));// 段界限 2 + 属性 2
++       p_desc->base_high               = (u8_t)((base >> 24) & 0x0FF);         // 段基址 3\(1 字节)
++        return;
++}
++
+
++
++PUBLIC LKINIT void init_descriptor()
++{
++       for(u32_t gdtindx=0;gdtindx<CPUCORE_MAX;gdtindx++)
++       {
++
++               set_descriptor(&GDT[gdtindx][0],0,0,0);//0
++               set_descriptor(&GDT[gdtindx][1],0,0xffffffff,DA_CR|  DA_32|DA_LIMIT_4K);//0x8
++               set_descriptor(&GDT[gdtindx][2],0,0xffffffff,DA_DRW | DA_32|DA_LIMIT_4K);//0x10
++               set_descriptor(&GDT[gdtindx][3],0,0xffffffff,DA_CR | DA_32|DA_LIMIT_4K|DA_DPL3);//0x1b 0,0xffffffff,DA_
+DRW | DA_32|DA_LIMIT_4K);
++
++               set_descriptor(&GDT[gdtindx][4],0,0xffffffff,DA_DRW | DA_32|DA_LIMIT_4K|DA_DPL3);//0x23
++
++               set_descriptor(&GDT[gdtindx][5],(u32_t)&tss[gdtindx],sizeof(tss[gdtindx])-1,DA_386TSS);
++               set_descriptor(&GDT[gdtindx][6],0,0xffff,DA_C);
++
++               iGDT[gdtindx].gdtbass = (u32_t)GDT[gdtindx];
++               iGDT[gdtindx].gdtLen = sizeof(GDT[gdtindx])-1;
++       }
++
++       //set_igdtr(GDT[0]);
++       x86_lgdt(&iGDT[0]);
++       x86_ltr(K_TAR_IDX);
++       //printf("                       init GDT LTR descriptor!!");
++       //printf("init IDT oooooooooGATE!!\n");
++       //for(;;);
++       return;
++}
+
++PUBLIC LKINIT void init_idt_descriptor()
++{
++       for(u16_t intindx =0;intindx<=255;intindx++)
++       {
++               //if(intindx==0x20)
++       //              intindx=INT_VECTOR_IRQ8+8;
++               set_idt_desc((u8_t)intindx,DA_386IGate,hxi_exc_general_intpfault,PRIVILEGE_KRNL);
++       }
++       set_idt_desc(INT_VECTOR_DIVIDE,DA_386IGate,exc_divide_error,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_DEBUG,DA_386IGate,exc_single_step_exception,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_NMI,DA_386IGate,exc_nmi,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_BREAKPOINT,DA_386IGate,exc_breakpoint_exception,PRIVILEGE_USER);
++
++       set_idt_desc(INT_VECTOR_OVERFLOW,DA_386IGate,exc_overflow,PRIVILEGE_USER);
++
++       set_idt_desc(INT_VECTOR_BOUNDS,DA_386IGate,exc_bounds_check,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_INVAL_OP,DA_386IGate,exc_inval_opcode,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_COPROC_NOT,DA_386IGate,exc_copr_not_available,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_DOUBLE_FAULT,DA_386IGate,exc_double_fault,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_COPROC_SEG,DA_386IGate,exc_copr_seg_overrun,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_INVAL_TSS,DA_386IGate,exc_inval_tss,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_SEG_NOT,DA_386IGate,exc_segment_not_present,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_STACK_FAULT,DA_386IGate,exc_stack_exception,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_PROTECTION,DA_386IGate,exc_general_protection,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_PAGE_FAULT,DA_386IGate,exc_page_fault,PRIVILEGE_KRNL);
++
++       //set_idt_desc(15,DA_386IGate,hxi_exc_general_intpfault,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_COPROC_ERR,DA_386IGate,exc_copr_error,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_ALIGN_CHEK,DA_386IGate,exc_alignment_check,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_MACHI_CHEK,DA_386IGate,exc_machine_check,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_SIMD_FAULT,DA_386IGate,exc_simd_fault,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ0 + 0,DA_386IGate,hxi_hwint00,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ0 + 1,DA_386IGate,hxi_hwint01,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ0 + 2,DA_386IGate,hxi_hwint02,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ0 + 3,DA_386IGate,hxi_hwint03,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ0 + 4,DA_386IGate,hxi_hwint04,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ0 + 5,DA_386IGate,hxi_hwint05,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ0 + 6,DA_386IGate,hxi_hwint06,PRIVILEGE_KRNL);
+
++       set_idt_desc(INT_VECTOR_IRQ0 + 7,DA_386IGate,hxi_hwint07,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 0,DA_386IGate,hxi_hwint08,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 1,DA_386IGate,hxi_hwint09,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 2,DA_386IGate,hxi_hwint10,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 3,DA_386IGate,hxi_hwint11,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 4,DA_386IGate,hxi_hwint12,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 5,DA_386IGate,hxi_hwint13,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 6,DA_386IGate,hxi_hwint14,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 7,DA_386IGate,hxi_hwint15,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 8,DA_386IGate,hxi_hwint16,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 9,DA_386IGate,hxi_hwint17,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 10,DA_386IGate,hxi_hwint18,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 11,DA_386IGate,hxi_hwint19,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 12,DA_386IGate,hxi_hwint20,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 13,DA_386IGate,hxi_hwint21,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 14,DA_386IGate,hxi_hwint22,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_IRQ8 + 15,DA_386IGate,hxi_hwint23,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_APIC_IPI_SCHEDUL,DA_386IGate,hxi_apic_ipi_schedul,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_APIC_SVR,DA_386IGate,hxi_apic_svr,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_APIC_TIMER,DA_386IGate,hxi_apic_timer,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_APIC_THERMAL,DA_386IGate,hxi_apic_thermal,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_APIC_PERFORM,DA_386IGate,hxi_apic_performonitor,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_APIC_LINTO,DA_386IGate,hxi_apic_lint0,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_APIC_LINTI,DA_386IGate,hxi_apic_lint1,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_APIC_ERROR,DA_386IGate,hxi_apic_error,PRIVILEGE_KRNL);
++
++       set_idt_desc(INT_VECTOR_SYSCALL,DA_386IGate,exi_sys_call,PRIVILEGE_USER);
++
++       set_iidtr(IDT);
++       x86_lidt(&iIDT);
++       //printf(" init IDT GATE!!\n");
++       return;
++}
+
++typedef struct s_TREE
++{
++       u16_t tr_type;
++       u16_t tr_color;
++       //spinlock_t tr_lock;
++       u64_t tr_hight;
++       struct s_TREE* tr_left;
++       struct s_TREE* tr_right;
++       struct s_TREE* tr_paret;
++       struct s_TREE* tr_subs;
++}tree_t;
+
++typedef struct s_MACHBSTART
++{
++    u64_t   mb_migc;          //LMOSMBSP//0
++    u64_t   mb_chksum;//8
++    u64_t   mb_krlinitstack;//16
++    u64_t   mb_krlitstacksz;//24
++    u64_t   mb_lmosimgpadr;
++    u64_t   mb_lmosimgsz;
++    u64_t   mb_krlimgpadr;
++    u64_t   mb_krlsz;
++    u64_t   mb_krlvec;
++    u64_t   mb_krlrunmode;
++    u64_t   mb_kalldendpadr;
++    u64_t   mb_ksepadrs;
++    u64_t   mb_ksepadre;
++    u64_t   mb_kservadrs;
++    u64_t   mb_kservadre;
++    u64_t   mb_nextwtpadr;
++    u64_t   mb_bfontpadr;
++    u64_t   mb_bfontsz;
++    u64_t   mb_fvrmphyadr;
++    u64_t   mb_fvrmsz;
++    u64_t   mb_cpumode;
++    u64_t   mb_memsz;
++    u64_t   mb_e820padr;
++    u64_t   mb_e820nr;
++    u64_t   mb_e820sz;
++    u64_t   mb_e820expadr;
++    u64_t   mb_e820exnr;
++    u64_t   mb_e820exsz;
++    u64_t   mb_memznpadr;
++    u64_t   mb_memznnr;
++    u64_t   mb_memznsz;
++    u64_t   mb_memznchksum;
++    u64_t   mb_memmappadr;
++    u64_t   mb_memmapnr;
++    u64_t   mb_memmapsz;
++    u64_t   mb_memmapchksum;
++    u64_t   mb_pml4padr;
++    u64_t   mb_subpageslen;
++    u64_t   mb_kpmapphymemsz;
++    u64_t   mb_ebdaphyadr;
++    mrsdp_t mb_mrsdp;
++    graph_t mb_ghparm;
++}__attribute__((packed)) machbstart_t;
+
++#ifndef _GDTIDT_H
++#define _GDTIDT_H
++//#ifdef       GLOBAL_QUANJU_HERE
++//#undef       EXTERN
++//#define EXTERN
++//#endif
++
++
++void   exc_divide_error();
++void   exc_single_step_exception();
++void   exc_nmi();
++void   exc_breakpoint_exception();
++void   exc_overflow();
++void   exc_bounds_check();
++void   exc_inval_opcode();
++void   exc_copr_not_available();
++void   exc_double_fault();
++void   exc_copr_seg_overrun();
++void   exc_inval_tss();
++void   exc_segment_not_present();
++void   exc_stack_exception();
++void   exc_general_protection();
++void   exc_page_fault();
++void   exc_copr_error();
++void   exc_alignment_check();
++void   exc_machine_check();
++void   exc_simd_fault();
++void   hxi_exc_general_intpfault();
++void   hxi_hwint00();
++void   hxi_hwint01();
++void   hxi_hwint02();
++void   hxi_hwint03();
++void   hxi_hwint04();
++void   hxi_hwint05();
++void   hxi_hwint06();
++void   hxi_hwint07();
++void   hxi_hwint08();
++void   hxi_hwint09();
++void   hxi_hwint10();
++void   hxi_hwint11();
++void   hxi_hwint12();
++void   hxi_hwint13();
++void   hxi_hwint14();
++void   hxi_hwint15();
++void   hxi_hwint16();
++void   hxi_hwint17();
++void   hxi_hwint18();
++void   hxi_hwint19();
++void   hxi_hwint20();
++void   hxi_hwint21();
++void   hxi_hwint22();
++void   hxi_hwint23();
++void   hxi_apic_svr();
++void   hxi_apic_ipi_schedul();
++void   hxi_apic_timer();
++void   hxi_apic_thermal();
++void   hxi_apic_performonitor();
++void   hxi_apic_lint0();
++void   hxi_apic_lint1();
++void   hxi_apic_error();
++void   exi_sys_call();
++void   _ret_from_user_mode();
+
++EXTERN DESCRIPTOR GDT[CPU_MAX_NRS][GDTMAX];
++EXTERN GATE IDT[IDTMAX];
++EXTERN tss_t tss[CPU_MAX_NRS];
++EXTERN IGDTR iGDT[CPU_MAX_NRS];
++EXTERN IIDTR iIDT;
++EXTERN syscall_t syscalls_table[2];
++EXTERN sys_msg_oper_t sys_msg_op_table;
++EXTERN irq_desc_t irq_desc[IRQMAX];
++EXTERN struct s_TIME sys_clock;
++EXTERN u32_t kernel_kesp;
++
++EXTERN spinlock_t ap_boot_esp_lock;
++EXTERN volatile u8_t xapic_to_cpuid[258];
++
++EXTERN k_mmadr_t sys_kmadr;
++EXTERN kmcache_t main_kmcache;
++EXTERN iocachmtbl_t io_cach_tbl;
++EXTERN u8_t kernel_stack[STACKMAX];
++//EXTERN char str_buf[1024];
++EXTERN smp_mach_t smp_mach_data;
++
++EXTERN struct s_SCHED_MCHEAD sys_sched_mchead;//[CPU_MAX_NRS];
++EXTERN gfs_t sys_gfs;
++EXTERN dev_class_t devclasstbl[DEVCLASSMAX];
++EXTERN intctrlop_t glob_pic_op;
++EXTERN hd_reqb_t glob_hdreqb;
++EXTERN setup_t sys_setup;
++*/
++PUBLIC void init_descriptor();
++PUBLIC  void init_idt_descriptor();
++//PUBLIC void die(u32_t dt);
++
++PUBLIC void set_idt_desc(u8_t vector, u8_t desc_type, inthandler_t handler, u8_t privilege);
++
++PUBLIC void set_igdtr(DESCRIPTOR* gdtptr);
++
++PUBLIC void set_iidtr(GATE* idtptr);
++
++PUBLIC void set_descriptor(DESCRIPTOR * p_desc, u32_t base, u32_t limit, u16_t attribute);
++
++#endif
++//90
+
++#ifndef _GDTIDT_T_H
++#define _GDTIDT_T_H
++#ifdef GLOBAL_QUANJU_HERE
++#undef EXTERN
++#define EXTERN
++#endif
++#define DEVCLASSMAX 256
++#define GDTMAX 10
++#define IDTMAX 256
++#define STACKMAX 0x400
++
++
++#define K_CS_IDX       0x08
++#define K_DS_IDX       0x10
++#define U_CS_IDX       0x1b
++#define U_DS_IDX       0x23
++#define K_TAR_IDX      0x28
++#define UMOD_EFLAGS    0x1202
++
++
++/* 存储段描述符/系统段描述符 */
++typedef struct s_descriptor            /* 共 8 个字节 */
++{
++       u16_t   limit_low;              /* Limit */
++       u16_t   base_low;               /* Base */
++       u8_t    base_mid;               /* Base */
++       u8_t    attr1;                  /* P(1) DPL(2) DT(1) TYPE(4) */
++       u8_t    limit_high_attr2;       /* G(1) D(1) 0(1) AVL(1) LimitHigh(4) */
++       u8_t    base_high;              /* Base */
++}__attribute__((packed)) DESCRIPTOR;
++/* 门描述符 */
++typedef struct s_gate
++{
++       u16_t   offset_low;     /* Offset Low */
++       u16_t   selector;       /* Selector */
++       u8_t    dcount;         /* 该字段只在调用门描述符中有效。如果在利用
++                                  调用门调用子程序时引起特权级的转换和堆栈
++                                  的改变，需要将外层堆栈中的参数复制到内层
++                                  堆栈。该双字计数字段就是用于说明这种情况
++                                  发生时，要复制的双字参数的数量。*/
++       u8_t    attr;           /* P(1) DPL(2) DT(1) TYPE(4) */
++       u16_t   offset_high;    /* Offset High */
++}__attribute__((packed)) GATE;
++
++typedef struct s_gdtptr
++{
++       u16_t gdtLen;
++       u32_t gdtbass;
++}__attribute__((packed)) IGDTR;
++
++typedef struct s_idtptr
++{
++       u16_t idtLen;
++       u32_t idtbass;
++}__attribute__((packed)) IIDTR;
++
+
++typedef struct s_TSS{
++       u32_t   backlink;
++       u32_t   esp0;           /* stack pointer to use during interrupt */
++       u32_t   ss0;            /*   "   segment  "  "    "        "     */
++       u32_t   esp1;
++       u32_t   ss1;
++       u32_t   esp2;
++       u32_t   ss2;
++       u32_t   cr3;
++       u32_t   eip;
++       u32_t   flags;
++       u32_t   eax;
++       u32_t   ecx;
++       u32_t   edx;
++       u32_t   ebx;
++       u32_t   esp;
++       u32_t   ebp;
++       u32_t   esi;
++       u32_t   edi;
++       u32_t   es;
++       u32_t   cs;
++       u32_t   ss;
++       u32_t   ds;
++       u32_t   fs;
++       u32_t   gs;
++       u32_t   ldt;
++       u16_t   trap;
++       u16_t   iobase; /* I/O位图基址大于或等于TSS段界限，就表示没有I/O许可位图 */
++       /*u8    iomap[2];*/
++}__attribute__((packed)) tss_t;
++
++typedef struct s_DEV_CLASS
++{
++       spinlock_t dvcs_lock;
++       list_h_t dvcs_list;
++       u32_t dvcs_flags;
++       void* dvcs_devtbl;
++       void* dvcs_otherdata;
++}dev_class_t;
++
++
++
++/* GDT */
++/* 描述符索引 */
++#define        PRIVILEGE_KRNL  0
++#define        PRIVILEGE_TASK  1
++#define        PRIVILEGE_USER  3
++/* RPL */
++#define        RPL_KRNL        SA_RPL0
++#define        RPL_TASK        SA_RPL1
++#define        RPL_USER        SA_RPL3
++
++#define        INDEX_DUMMY             0       // ┓
++#define        INDEX_FLAT_C            1       // ┣ LOADER 里面已经确定了的.
++#define        INDEX_FLAT_RW           2       // ┃
++#define        INDEX_VIDEO             3       // ┛
++/* 选择子 */
++#define        SELECTOR_DUMMY             0            // ┓
++#define        SELECTOR_FLAT_C 0x08            // ┣ LOADER 里面已经确定了的.
++#define        SELECTOR_FLAT_RW        0x10            // ┃
++#define        SELECTOR_VIDEO          (0x18+3)        // ┛<-- RPL=3
+
++
++/* 描述符类型值说明 */
++#define        DA_32                   0x4000  /* 32 位段                              */
++#define        DA_LIMIT_4K             0x8000  /* 段界限粒度为 4K 字节                 */
++#define        DA_DPL0                 0x00    /* DPL = 0                              */
++#define        DA_DPL1                 0x20    /* DPL = 1                              */
++#define        DA_DPL2                 0x40    /* DPL = 2                              */
++#define        DA_DPL3                 0x60    /* DPL = 3                              */
++/* 存储段描述符类型值说明 */
++#define        DA_DR                   0x90    /* 存在的只读数据段类型值               */
++#define        DA_DRW                  0x92    /* 存在的可读写数据段属性值             */
++#define        DA_DRWA                 0x93    /* 存在的已访问可读写数据段类型值       */
++#define        DA_C                    0x98    /* 存在的只执行代码段属性值             */
++#define        DA_CR                   0x9A    /* 存在的可执行可读代码段属性值         */
++#define        DA_CCO                  0x9C    /* 存在的只执行一致代码段属性值         */
++#define        DA_CCOR                 0x9E    /* 存在的可执行可读一致代码段属性值     */
++/* 系统段描述符类型值说明 */
++#define        DA_LDT                  0x82    /* 局部描述符表段类型值                 */
++#define        DA_TaskGate             0x85    /* 任务门类型值                         */
++#define        DA_386TSS               0x89    /* 可用 386 任务状态段类型值            */
++#define        DA_386CGate             0x8C    /* 386 调用门类型值                     */
++#define        DA_386IGate             0x8E    /* 386 中断门类型值                     */
++#define        DA_386TGate             0x8F    /* 386 陷阱门类型值                     */
++
++/* 中断向量 */
++#define        INT_VECTOR_DIVIDE               0x0
++#define        INT_VECTOR_DEBUG                0x1
++#define        INT_VECTOR_NMI                  0x2
++#define        INT_VECTOR_BREAKPOINT           0x3
++#define        INT_VECTOR_OVERFLOW             0x4
++#define        INT_VECTOR_BOUNDS               0x5
++#define        INT_VECTOR_INVAL_OP             0x6
++#define        INT_VECTOR_COPROC_NOT           0x7
++#define        INT_VECTOR_DOUBLE_FAULT 0x8
++#define        INT_VECTOR_COPROC_SEG           0x9
++#define        INT_VECTOR_INVAL_TSS            0xA
++#define        INT_VECTOR_SEG_NOT              0xB
++#define        INT_VECTOR_STACK_FAULT          0xC
++#define        INT_VECTOR_PROTECTION           0xD
++#define        INT_VECTOR_PAGE_FAULT           0xE
++#define        INT_VECTOR_COPROC_ERR           0x10
++#define        INT_VECTOR_ALIGN_CHEK           0x11
++#define        INT_VECTOR_MACHI_CHEK           0x12
++#define        INT_VECTOR_SIMD_FAULT           0x13
++
+
++/* 中断向量 */
++#define        INT_VECTOR_IRQ0                 0x20
++#define        INT_VECTOR_IRQ8                 0x28
++
++#define INT_VECTOR_APIC_IPI_SCHEDUL     0xe0
++#define        INT_VECTOR_APIC_SVR             0xef
++#define INT_VECTOR_APIC_TIMER          0xf0
++#define INT_VECTOR_APIC_THERMAL                0xf1
++#define INT_VECTOR_APIC_PERFORM                0xf2
++#define INT_VECTOR_APIC_LINTO          0xf3
++#define INT_VECTOR_APIC_LINTI          0xf4
++#define INT_VECTOR_APIC_ERROR          0xf5
++
++#define INT_VECTOR_SYSCALL             0xFF
++
++#endif
++//90

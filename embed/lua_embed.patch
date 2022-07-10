@@ -1,0 +1,148 @@
+@@ -471,6 +471,7 @@ driver_error_t *net_ota() {
+     sprintf((char *)buffer, "/?firmware=%s&commit=%s", CONFIG_LUA_RTOS_FIRMWARE, BUILD_COMMIT);
+
+     if ((error = net_http_get(&client, (const char *)buffer, &response))) {
++        net_http_destroy_client(&client);
+         return error;
+     }
+
+@@ -490,6 +491,7 @@ driver_error_t *net_ota() {
+         esp_err_t err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
+         if (err != ESP_OK) {
+             printf("Failed, error %d\r\n", err);
++            net_http_destroy_client(&client);
+             return NULL;
+         }
+
+@@ -497,12 +499,14 @@ driver_error_t *net_ota() {
+
+         while (response.size > 0){
+             if ((error = net_http_read_response(&response, buffer, sizeof(buffer)))) {
++                net_http_destroy_client(&client);
+                 return error;
+             }
+
+             err = esp_ota_write(update_handle, buffer, response.len);
+             if (err != ESP_OK) {
+                 printf("\nChunk written unsuccessfully in partition (offset 0x%08x), error %d\r\n", address, err);
++                net_http_destroy_client(&client);
+                 return NULL;
+             } else {
+                 printf("\rChunk written successfully in partition at offset 0x%08x", address);
+
+
+@@ -660,6 +660,9 @@ close_tun(struct tuntap *tt)
+         if (tt->fd >= 0) {
+             close(tt->fd);
+         }
++#if __XTENSA__
++        free(tt->actual_name);
++#endif
+         free(tt);
+     }
+ }
+
+
+@@ -105,7 +105,17 @@ void vfs_tun_register()
+ struct netif *tcp_adapter_get_netif(tcpip_adapter_if_t tcpip_if);
+
+ static int vfs_tun_open(const char *path, int flags, int mode) {
+-       // Create the tx and rx queues
++
++    if (tun_queue_rx) {
++        vQueueDelete(tun_queue_rx);
++        tun_queue_rx = NULL;
++    }
++    if (tun_queue_tx) {
++        vQueueDelete(tun_queue_tx);
++        tun_queue_tx = NULL;
++    }
++
++    // Create the tx and rx queues
+     tun_queue_rx = xQueueCreate(4, sizeof(struct pbuf *));
+     tun_queue_tx = xQueueCreate(4, sizeof(struct pbuf *));
+
+
+@@ -250,6 +249,7 @@ static int l_nvs_read(lua_State *L) {
+     // Read key value
+     err = nvs_get_blob(handle_to_settings, key,val_val, &key_size);
+     if (err != ESP_OK) {
++        free(val_val);
+        nvs_close(handle_to_settings);
+        nvs_error(L, err);
+        return 0;
+
++    // Alloc space for retrieve key value
++    void *val_val = malloc(key_size);
++    if (!val_val) {
++        nvs_close(handle_to_settings);
++        nvs_error(L, ESP_ERR_NO_MEM);
++        return 0;
++    }
++
++    // Read key value
++    err = nvs_get_blob(handle_to_settings, key, val_val, &key_size);  // when not actually providing a val_val here,
++    if (err != ESP_OK) {                                              // the function will improperly report an
++        free(val_val);                                                // already deleted nvs value as still existing
++        nvs_close(handle_to_settings);
++        lua_pushboolean(L, 0);
++        return 1;
++    }
++
++    free(val_val);
++
+
+
+@@ -404,8 +405,9 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
+         // If in flags are set some write access mode this is an error, because we only
+         // can open a directory in read mode.
+         if (spiffs_flgs & (SPIFFS_WRONLY | SPIFFS_CREAT | SPIFFS_TRUNC)) {
++            lstremove(&files, fd, 0);
+             free(file->fs_file);
+-            lstremove(&files, fd, 1);
++            free(file);
+             mtx_unlock(&vfs_mtx);
+             errno = EISDIR;
+             return -1;
+
+
++       // after send_error the request will usually end
++       // so make sure the buffer used in do_printf is deleted here
++       // as the calling function might not really notice it's usage
++       if (request->printf_buffer) {
++               free(request->printf_buffer);
++               request->printf_buffer = NULL;
++       }
+
+
++        if (NULL == str) {
++            return luaL_error(L, "could not allocate memory to read *el");
++        }
+
+         res = uart_reads(id, str, 1, timeout);
+         if (res) {
+             lua_pushlstring(L, str, strlen(str));
+-            free(str);
+         } else {
+-            lua_pushnil(L);
++            lua_pushnil(L);
+         }
+-
++
++        free(str);
+         return 1;
+
+
+
+-char *do_gets(char *s, int size, http_request_handle *request) {
++static char *do_gets(char *s, int size, http_request_handle *request) {
+
+        int socket = request->config->secure ? SSL_get_fd(request->ssl) : request->socket;
+
+@@ -386,6 +386,7 @@ int http_status(lua_State* L) {
+                lua_pushinteger(L, 0);
+        }
+
++       lua_pop(L, 1);
+        return 1;
+ }
